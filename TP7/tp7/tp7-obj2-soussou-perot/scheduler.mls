@@ -1,0 +1,170 @@
+open Scheduler_data
+type select_acc = { tid: int; speriod: int }
+node select_aux(ts : Scheduler_data.task_status;
+                 ta : Scheduler_data.task_attributes; cpu : int; tid : int;
+                 acc : select_acc)
+returns (acc_o : select_acc)
+var v : bool; v_1 : bool; v_2 : bool; v_3 : bool; v_4 : bool;
+    v_5 : select_acc;
+let
+  acc_o = if v_4 then v_5 else acc;
+  v_5 = { tid = tid; speriod = ta.Scheduler_data.period };
+  v_4 = (v_2 & v_3);
+  v_3 = (ta.Scheduler_data.period < acc.speriod);
+  v_2 = (v & v_1);
+  v_1 = (cpu = Scheduler_data.nocpu);
+  v = (ts.Scheduler_data.status = Scheduler_data.Ready)
+tel
+
+node select_one_task(ts : Scheduler_data.task_status^Scheduler_data.ntasks;
+                      cpu : int^Scheduler_data.ntasks)
+returns (selected : int)
+var tmp : select_acc; v : select_acc;
+let
+  selected = tmp.tid;
+  tmp =
+    (foldi (select_aux())<<Scheduler_data.ntasks>>)
+      (())(ts, Scheduler_data.tasks, cpu, v);
+  v = { tid = Scheduler_data.ntasks; speriod = Scheduler_data.int_max }
+tel
+
+node update_selected(ts : Scheduler_data.task_status; selected : int;
+                      tid : int)
+returns (tso : Scheduler_data.task_status)
+var v : bool; v_6 : Scheduler_data.task_status;
+let
+  tso = if v then v_6 else ts;
+  v_6 =
+    { Scheduler_data.status = 
+      Scheduler_data.Running;
+      Scheduler_data.current_deadline = 
+      ts.Scheduler_data.current_deadline;
+      Scheduler_data.left = 
+      ts.Scheduler_data.left };
+  v = (tid = selected)
+tel
+
+node update_cpu_assign(old : int; selected : int; core : int; tid : int)
+returns (nc : int)
+var v : bool;
+let
+  nc = if v then core else old;
+  v = (tid = selected)
+tel
+
+node schedule_one(ts : Scheduler_data.task_status^Scheduler_data.ntasks;
+                   cpu : int^Scheduler_data.ntasks; core : int)
+returns (ts_o : Scheduler_data.task_status^Scheduler_data.ntasks;
+          cpu_o : int^Scheduler_data.ntasks)
+var sel : int; v : int^Scheduler_data.ntasks;
+    v_7 : int^Scheduler_data.ntasks; v_8 : int^Scheduler_data.ntasks;
+let
+  cpu_o =
+    (mapi (update_cpu_assign())<<Scheduler_data.ntasks>>)(())(cpu, v_7, v_8);
+  v_8 = core^Scheduler_data.ntasks;
+  v_7 = sel^Scheduler_data.ntasks;
+  ts_o = (mapi (update_selected())<<Scheduler_data.ntasks>>)(())(ts, v);
+  v = sel^Scheduler_data.ntasks;
+  sel = select_one_task(ts, cpu)
+tel
+
+node simulate(ts : Scheduler_data.task_status)
+returns (o : Scheduler_data.task_status)
+var v : bool; v_9 : bool; v_10 : int; v_11 : Scheduler_data.task_status;
+    v_12 : Scheduler_data.task_status; v_13 : Scheduler_data.task_status;
+let
+  o = if v then v_13 else ts;
+  v_13 = if v_9 then v_11 else v_12;
+  v_12 =
+    { Scheduler_data.status = 
+      Scheduler_data.Waiting;
+      Scheduler_data.current_deadline = 
+      ts.Scheduler_data.current_deadline;
+      Scheduler_data.left = 
+      0 };
+  v_11 =
+    { Scheduler_data.status = 
+      Scheduler_data.Running;
+      Scheduler_data.current_deadline = 
+      ts.Scheduler_data.current_deadline;
+      Scheduler_data.left = 
+      v_10 };
+  v_10 = (ts.Scheduler_data.left - 1);
+  v_9 = (ts.Scheduler_data.left > 1);
+  v = (ts.Scheduler_data.status = Scheduler_data.Running)
+tel
+
+node update_cpu_after(ts : Scheduler_data.task_status; old : int; tid : int)
+returns (nc : int)
+var v : bool;
+let
+  nc = if v then old else Scheduler_data.nocpu;
+  v = (ts.Scheduler_data.status = Scheduler_data.Running)
+tel
+
+node start_inst(date : int; ts : Scheduler_data.task_status;
+                 ta : Scheduler_data.task_attributes; tid : int)
+returns (o : Scheduler_data.task_status)
+var c : bool; k : int; diff : int; v : bool; v_14 : int; v_15 : bool;
+    v_16 : bool; v_17 : bool; v_18 : int; v_19 : Scheduler_data.task_status;
+let
+  o = if v_17 then v_19 else ts;
+  v_19 =
+    { Scheduler_data.status = 
+      Scheduler_data.Ready;
+      Scheduler_data.current_deadline = 
+      v_18;
+      Scheduler_data.left = 
+      ta.Scheduler_data.capacity };
+  v_18 = (date + ta.Scheduler_data.deadline);
+  v_17 = (c & v_16);
+  v_16 = (ts.Scheduler_data.status = Scheduler_data.Waiting);
+  c = (v & v_15);
+  v_15 = (diff = v_14);
+  v_14 = (k * ta.Scheduler_data.period);
+  v = (date >= ta.Scheduler_data.first_start);
+  k = (diff / ta.Scheduler_data.period);
+  diff = (date - ta.Scheduler_data.first_start)
+tel
+
+node scheduler(si : Scheduler_data.scheduler_state)
+returns (so : Scheduler_data.scheduler_state)
+var cpu2 : int^Scheduler_data.ntasks; cpu1 : int^Scheduler_data.ntasks;
+    cpu0 : int^Scheduler_data.ntasks; cpu_after : int^Scheduler_data.ntasks;
+    t_c2 : Scheduler_data.task_status^Scheduler_data.ntasks;
+    t_c1 : Scheduler_data.task_status^Scheduler_data.ntasks;
+    t_c0 : Scheduler_data.task_status^Scheduler_data.ntasks;
+    t_new : Scheduler_data.task_status^Scheduler_data.ntasks;
+    t_sim : Scheduler_data.task_status^Scheduler_data.ntasks; d : int;
+    v : int^Scheduler_data.ntasks;
+let
+  so =
+    { Scheduler_data.current_date = 
+      d;
+      Scheduler_data.cpu = 
+      cpu2;
+      Scheduler_data.tasks = 
+      t_c2 };
+  (t_c2, cpu2) = schedule_one(t_c1, cpu1, 2);
+  (t_c1, cpu1) = schedule_one(t_c0, cpu0, 1);
+  (t_c0, cpu0) = schedule_one(t_new, cpu_after, 0);
+  t_new =
+    (mapi (start_inst())<<Scheduler_data.ntasks>>)
+      (())(v, t_sim, Scheduler_data.tasks);
+  v = d^Scheduler_data.ntasks;
+  cpu_after =
+    (mapi (update_cpu_after())<<Scheduler_data.ntasks>>)
+      (())(t_sim, si.Scheduler_data.cpu);
+  t_sim =
+    (map (simulate())<<Scheduler_data.ntasks>>)(())(si.Scheduler_data.tasks);
+  d = (si.Scheduler_data.current_date + 1)
+tel
+
+node main returns (s : Scheduler_data.scheduler_state)
+var st : Scheduler_data.scheduler_state; v : Scheduler_data.scheduler_state;
+let
+  s = st;
+  st = Scheduler_data.init_sstate fby v;
+  v = scheduler(st)
+tel
+

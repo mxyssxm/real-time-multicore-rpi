@@ -1,0 +1,21 @@
+type task_attributes =
+  { period: int; capacity: int; deadline: int; first_start: int }
+const ntasks = 5
+const ncores = 3
+const tasks = [{ period = 10; capacity = 3; deadline = 10; first_start = 0 },
+                { period = 12; capacity = 4; deadline = 12; first_start = 0 },
+                { period = 20; capacity = 5; deadline = 20; first_start = 0 },
+                { period = 15; capacity = 2; deadline = 15; first_start = 0 },
+                { period = 8; capacity = 3; deadline = 8; first_start = 0 }]
+const int_max = 2147483647
+const nocpu = ~-(1)
+type task_state = Running|Ready|Waiting
+type task_status = { status: task_state; current_deadline: int; left: int }
+type scheduler_state =
+  { current_date: int; cpu: int^ntasks; tasks: task_status^ntasks }
+const init_sstate = { current_date = 
+                      ~-(1);
+                      cpu = 
+                      nocpu^ntasks;
+                      tasks = 
+                      { status = Waiting; current_deadline = 0; left = 0 }^ntasks }

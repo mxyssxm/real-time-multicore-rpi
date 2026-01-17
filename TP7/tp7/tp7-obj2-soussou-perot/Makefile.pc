@@ -1,0 +1,16 @@
+EXEC = simu_obj2
+
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c11 -Ischeduler_c -Ischeduler_data_c -I.
+
+SOURCES = $(wildcard scheduler_c/*.c) \
+          $(wildcard scheduler_data_c/*.c) \
+          main.c
+
+all: $(EXEC)
+
+$(EXEC): $(SOURCES)
+	$(CC) $(CFLAGS) $(SOURCES) -o $(EXEC)
+
+clean:
+	rm -f $(EXEC)
