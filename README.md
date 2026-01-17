@@ -11,7 +11,7 @@ The project covers:
 - real-time task scheduling,
 - deployment and execution on a physical Raspberry Pi.
 
-**This project was developed in collaboration with a fellow student Walid Perot.**
+**This project was developed in collaboration with a fellow student.**
 
 ---
 
@@ -104,7 +104,7 @@ It reflects a complete workflow from **formal modeling → simulation → hardwa
 
 ## Authors
 
-- **Meyssem**  
+- **mxyssxm**  
 - Project completed **in duo with a fellow student** as part of an advanced systems course.
 
 
