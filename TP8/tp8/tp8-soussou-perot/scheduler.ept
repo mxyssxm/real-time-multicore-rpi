@@ -1,0 +1,129 @@
+open Scheduler_data
+
+(* ----------  sélection EDF ---------- *)
+
+type select_acc = { tid : int; dline : int }
+
+fun select_aux(ts:task_status; ta:task_attributes; cpu:int; tid:int;
+               acc:select_acc) returns (acc_o:select_acc)
+let
+  acc_o =
+    (* EDF : tâche Ready, pas encore assignée (cpu = nocpu),
+       avec la plus petite deadline courante *)
+    if (ts.status = Ready) and (cpu = nocpu)
+       and (ts.current_deadline < acc.dline) then
+      { tid = tid; dline = ts.current_deadline }
+    else
+      acc;
+tel
+
+fun select_one_task(ts:task_status^ntasks; cpu:int^ntasks)
+returns (selected:int)
+var tmp : select_acc;
+let
+  (* Initial: aucune tâche choisie, deadline = int_max *)
+  tmp = foldi<<ntasks>> select_aux
+          (ts, tasks, cpu, { tid = ntasks; dline = int_max });
+  selected = tmp.tid;
+tel
+
+fun update_selected(ts:task_status; selected:int; tid:int)
+returns (tso:task_status)
+let
+  tso =
+    if tid = selected then
+      { status = Running;
+        current_deadline = ts.current_deadline;
+        left = ts.left }
+    else
+      ts;
+tel
+
+fun update_cpu_assign(old:int; selected:int; core:int; tid:int)
+returns (nc:int)
+let
+  nc =
+    if tid = selected then core
+    else old;
+tel
+
+node schedule_one(ts:task_status^ntasks; cpu:int^ntasks; core:int)
+returns (ts_o:task_status^ntasks; cpu_o:int^ntasks)
+var sel:int;
+let
+  sel   = select_one_task(ts, cpu);
+  ts_o  = mapi<<ntasks>> update_selected (ts, sel^ntasks);
+  cpu_o = mapi<<ntasks>> update_cpu_assign (cpu, sel^ntasks, core^ntasks);
+tel
+
+(* ----------  exécution & instanciation ---------- *)
+
+fun simulate(ts:task_status) returns (o:task_status)
+let
+  o =
+    if ts.status = Running then
+      if ts.left > 1 then
+        { status = Running;
+          current_deadline = ts.current_deadline;
+          left = ts.left - 1 }
+      else
+        { status = Waiting;
+          current_deadline = ts.current_deadline;
+          left = 0 }
+    else
+      ts;
+tel
+
+fun update_cpu_after(ts:task_status; old:int; tid:int)
+returns (nc:int)
+let
+  nc =
+    if ts.status = Running then old
+    else nocpu;
+tel
+
+fun start_inst(date:int; ts:task_status; ta:task_attributes; tid:int)
+returns (o:task_status)
+var diff:int; k:int; c:bool;
+let
+  diff = date - ta.first_start;
+  k    = diff / ta.period;
+  c    = (date >= ta.first_start) and (diff = k * ta.period);
+  o =
+    if c and (ts.status = Waiting) then
+      { status = Ready;
+        current_deadline = date + ta.deadline;
+        left = ta.capacity }
+    else
+      ts;
+tel
+
+(* ----------  un pas de scheduler (2 CPU) ---------- *)
+
+node scheduler(si:scheduler_state) returns (so:scheduler_state)
+var d:int;
+    t_sim, t_new, t_c0, t_c1 : task_status^ntasks;
+    cpu_after, cpu0, cpu1    : int^ntasks;
+let
+  d        = si.current_date + 1;
+  t_sim    = map<<ntasks>> simulate(si.tasks);
+  cpu_after = mapi<<ntasks>> update_cpu_after (t_sim, si.cpu);
+  t_new    = mapi<<ntasks>> start_inst (d^ntasks, t_sim, tasks);
+
+  (* Bi-coeur : CPU 0 puis CPU 1 *)
+  (t_c0, cpu0) = schedule_one(t_new,  cpu_after, 0);
+  (t_c1, cpu1) = schedule_one(t_c0,   cpu0,      1);
+
+  so = { current_date = d;
+         cpu          = cpu1;
+         tasks        = t_c1 };
+tel
+
+(* ----------  node principal pour le C ---------- *)
+
+node main() returns (s:scheduler_state)
+var st:scheduler_state;
+let
+  st = init_sstate fby scheduler(st);
+  s  = st;
+tel
