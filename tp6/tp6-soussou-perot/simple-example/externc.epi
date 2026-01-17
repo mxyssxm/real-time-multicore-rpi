@@ -1,3 +1,0 @@
-fun f() returns (int)
-fun g(int) returns (int)
-fun h(int;int) returns (int)

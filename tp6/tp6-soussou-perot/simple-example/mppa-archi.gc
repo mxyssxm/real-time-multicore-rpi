@@ -1,7 +1,0 @@
-Cores : 3
-
-Memory Bank Number : 8
-Bank Size : 0x40000
-
-Memory Excluded
-[Start:0x000000 End:0x060000]/* Reserved for boot code */
